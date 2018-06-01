@@ -1,8 +1,8 @@
-package chapter01;
+package ch1;
 
 /**
  * 死锁例子
- * 
+ *
  * @author tengfei.fangtf
  * @version $Id: DeadLockDemo.java, v 0.1 2015-7-18 下午10:08:28 tengfei.fangtf Exp $
  */
@@ -49,3 +49,5 @@ public class DeadLockDemo {
     }
 
 }
+
+
