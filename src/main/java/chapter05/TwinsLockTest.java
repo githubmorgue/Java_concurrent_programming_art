@@ -5,7 +5,7 @@ package chapter05;
 
 import java.util.concurrent.locks.Lock;
 
-import chapter04.SleepUtils;
+import chapter01.SleepUtils;
 
 /**
  * 10-11
