@@ -30,6 +30,10 @@ public class DefaultThreadPool<Job extends Runnable> implements ThreadPool<Job> 
     }
 
     public DefaultThreadPool(int num) {
+        // 根据传入的数量num调整worker数量，确保其在允许的范围内
+        // 如果num大于最大worker数量MAX_WORKER_NUMBERS，则设置worker数量为MAX_WORKER_NUMBERS
+        // 如果num小于最小worker数量MIN_WORKER_NUMBERS，则设置worker数量为MIN_WORKER_NUMBERS
+        // 否则，将worker数量设置为num
         workerNum = num > MAX_WORKER_NUMBERS ? MAX_WORKER_NUMBERS : num < MIN_WORKER_NUMBERS ? MIN_WORKER_NUMBERS : num;
         initializeWokers(workerNum);
     }
@@ -37,8 +41,10 @@ public class DefaultThreadPool<Job extends Runnable> implements ThreadPool<Job> 
     public void execute(Job job) {
         if (job != null) {
             // 添加一个工作，然后进行通知
+            // 工作队列 jobs 是一个共享资源，多个线程（工作者线程和提交任务的线程）会并发访问，因此必须保证其线程安全性。
             synchronized (jobs) {
                 jobs.addLast(job);
+                // 如果使用 notifyAll()，所有等待的任务线程都会被唤醒争抢锁资源，这会造成资源浪费。
                 jobs.notify();
             }
         }
@@ -56,6 +62,7 @@ public class DefaultThreadPool<Job extends Runnable> implements ThreadPool<Job> 
             if (num + this.workerNum > MAX_WORKER_NUMBERS) {
                 num = MAX_WORKER_NUMBERS - this.workerNum;
             }
+            // 添加工作线程
             initializeWokers(num);
             this.workerNum += num;
         }
@@ -69,6 +76,7 @@ public class DefaultThreadPool<Job extends Runnable> implements ThreadPool<Job> 
             // 按照给定的数量停止Worker
             int count = 0;
             while (count < num) {
+                // 关闭当前计数所指向的worker线程，并将计数增加，准备处理下一个worker线程
                 workers.get(count).shutdown();
                 count++;
             }
@@ -80,7 +88,7 @@ public class DefaultThreadPool<Job extends Runnable> implements ThreadPool<Job> 
         return jobs.size();
     }
 
-    // 初始化线程工作者
+    // 初始化线程工作者，也用来执行添加工作线程的操作
     private void initializeWokers(int num) {
         for (int i = 0; i < num; i++) {
             Worker worker = new Worker();
@@ -102,6 +110,8 @@ public class DefaultThreadPool<Job extends Runnable> implements ThreadPool<Job> 
                     // 如果工作者列表是空的，那么就wait
                     while (jobs.isEmpty()) {
                         try {
+                            // 当前线程在此处释放 jobs 对象的锁，并进入等待状态，
+                            // 直到其他线程调用 jobs.notify() 或 jobs.notifyAll()
                             jobs.wait();
                         } catch (InterruptedException ex) {
                             // 感知到外部对WorkerThread的中断操作，返回
